@@ -1,4 +1,4 @@
-name: Apache Golden Image - GCP 
+name: Apache Golden Image - GCP   
 
 on:
   push:
