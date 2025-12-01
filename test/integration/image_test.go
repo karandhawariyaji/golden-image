@@ -18,7 +18,7 @@ func TestApacheGoldenImage(t *testing.T) {
 	}
 
 	terraformOptions := &terraform.Options{
-		TerraformDir: "../../terraform/-vm",
+		TerraformDir: "../../terraform/vm",
 		Vars: map[string]interface{}{
 			"image_name":  imageName,
 			"project_id":  os.Getenv("GCP_PROJECT"),
@@ -42,3 +42,4 @@ func TestApacheGoldenImage(t *testing.T) {
 		10*time.Second,
 	)
 }
+
