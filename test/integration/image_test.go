@@ -37,8 +37,9 @@ func TestApacheGoldenImage(t *testing.T) {
 		url,
 		nil,
 		200,
-		"Apache",
+		"Apache Server from Golden Image",
 		20,
 		10*time.Second,
 	)
 }
+
