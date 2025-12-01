@@ -20,27 +20,27 @@ variable "zone" {
   default = "us-central1-a"
 }
 
-source "googlecompute" "ubuntu" {
+source "googlecompute" "apache" {
   project_id          = var.project_id
   zone                = var.zone
   source_image_family = "ubuntu-2204-lts"
-  image_family        = "golden-ubuntu"
-  image_name          = "golden-ubuntu-{{timestamp}}"
+  image_family        = "golden-apache"
+  image_name          = "golden-apache-{{timestamp}}"
   ssh_username        = "packer"
 }
 
 build {
-  name    = "gcp-golden-image"
-  sources = ["source.googlecompute.ubuntu"]
+  name    = "gcp-apache-image"
+  sources = ["source.googlecompute.apache"]
 
   provisioner "shell" {
     inline = [
       "sudo apt update",
-      "sudo apt install -y python3 python3-pip"
+      "sudo apt install -y python3"
     ]
   }
 
   provisioner "ansible" {
-    playbook_file = "../ansible/harden.yml"
+    playbook_file = "../ansible/apache.yml"
   }
 }

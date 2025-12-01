@@ -1,0 +1,50 @@
+- name: Install & Harden Apache Server
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update OS
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+
+    - name: Enable & Start Apache
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+
+    - name: Allow HTTP & SSH in Firewall
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+      loop:
+        - "22"
+        - "80"
+
+    - name: Enable Firewall
+      ufw:
+        state: enabled
+
+    - name: Disable root SSH login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PermitRootLogin"
+        line: "PermitRootLogin no"
+
+    - name: Restart SSH
+      service:
+        name: ssh
+        state: restarted
+
+    - name: Create Custom Index Page
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <h1>Apache Server from Golden Image</h1>
+          <p>Built using Packer + Ansible + GitHub Actions</p>
