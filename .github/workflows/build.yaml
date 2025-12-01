@@ -43,9 +43,9 @@ jobs:
       id: packer_build
       run: |
         cd packer
-        packer build apche-image \
-          -var "project_id=${{ secrets.GCP_PROJECT_ID }}" \
-          -var "zone=us-central1-a" . > packer-output.log
+        packer build apache-image \
+          -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . > packer-output.log
+
 
     - name: Capture Image Name
       id: capture_image
