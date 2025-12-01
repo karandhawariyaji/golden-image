@@ -33,8 +33,55 @@ jobs:
         packer init .
         packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
 
-    # ✅ BUILD IMAGE
-    - name: Build Apache Image
+    # # ✅ BUILD IMAGE
+    # - name: Build Apache Image
+    #   run: |
+    #     cd packer
+    #     packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+
+    - name: Build Apache Golden Image
+      id: packer_build
       run: |
         cd packer
-        packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+        packer build apche-image \
+          -var "project_id=${{ secrets.GCP_PROJECT_ID }}" \
+          -var "zone=us-central1-a" . > packer-output.log
+
+    - name: Capture Image Name
+      id: capture_image
+      run: |
+        cd packer
+        IMAGE_NAME=$(grep 'artifact,0,id' packer-output.log | cut -d: -f2)
+
+        echo "IMAGE_NAME=$IMAGE_NAME"
+        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+
+    # ----------------------------
+    # SETUP GO FOR TERRATEST
+    # ----------------------------
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.21
+
+    
+    # ----------------------------
+    # ✅ INTEGRATION TEST (TERRATEST)
+    # ----------------------------
+    - name: Run Terratest on Image
+      run: |
+        cd test
+        go mod tidy
+        IMAGE_NAME=${{ env.IMAGE_NAME }} \
+        go test -v -timeout 30m ./integration
+    
+
+
+    # Delete image if tests fail
+    - name: Delete Image on Failure
+      if: failure()
+      run: |
+        echo "Tests failed, deleting unused image: ${{ env.IMAGE_NAME }}"
+        gcloud compute images delete ${{ env.IMAGE_NAME }} --quiet
+
