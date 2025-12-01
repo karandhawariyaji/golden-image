@@ -39,22 +39,41 @@ jobs:
     #     cd packer
     #     packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
 
+    # - name: Build Apache Golden Image
+    #   id: packer_build
+    #   run: |
+    #     cd packer
+    #     packer build apache-image \
+    #       -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . > packer-output.log
+
     - name: Build Apache Golden Image
       id: packer_build
       run: |
         cd packer
-        packer build apache-image \
-          -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . > packer-output.log
+        packer init .
+        packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+        packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
+
 
 
     - name: Capture Image Name
       id: capture_image
       run: |
-        cd packer
-        IMAGE_NAME=$(grep 'artifact,0,id' packer-output.log | cut -d: -f2)
-
+        IMAGE_NAME=$(gcloud compute images list \
+          --project=${{ secrets.GCP_PROJECT_ID }} \
+          --filter="name~'apache'" \
+          --sort-by=~creationTimestamp \
+          --limit=1 \
+          --format="value(name)")
+    
+        if [ -z "$IMAGE_NAME" ]; then
+          echo "ERROR: Image not found!"
+          exit 1
+        fi
+    
         echo "IMAGE_NAME=$IMAGE_NAME"
         echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
 
 
     # ----------------------------
@@ -78,10 +97,11 @@ jobs:
     
 
 
-    # Delete image if tests fail
-    - name: Delete Image on Failure
+    - name: Delete Image If Tests Fail
       if: failure()
       run: |
-        echo "Tests failed, deleting unused image: ${{ env.IMAGE_NAME }}"
-        gcloud compute images delete ${{ env.IMAGE_NAME }} --quiet
+        echo "❌ Tests failed. Deleting bad image: $IMAGE_NAME"
+        gcloud compute images delete $IMAGE_NAME \
+          --project=${{ secrets.GCP_PROJECT_ID }} --quiet
+
 
