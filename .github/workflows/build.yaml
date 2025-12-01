@@ -84,7 +84,14 @@ jobs:
       with:
         go-version: 1.21
 
-    
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Set Terraform Binary for Terratest
+      run: echo "TERRATEST_TERRAFORM_BINARY=terraform" >> $GITHUB_ENV
+
+
     # ----------------------------
     # ✅ INTEGRATION TEST (TERRATEST)
     # ----------------------------
