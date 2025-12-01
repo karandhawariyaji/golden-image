@@ -41,6 +41,7 @@ build {
   }
 
   provisioner "ansible" {
-    playbook_file = "../ansible/apache.yml"
+    playbook_file = "../ansible/apache.yaml"
   }
 }
+
