@@ -1,12 +1,12 @@
 package integration
 
 import (
+	"os"
 	"testing"
 	"time"
-	"os"
 
+	http_helper "github.com/gruntwork-io/terratest/modules/http-helper"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/gruntwork-io/terratest/modules/http-helper"
 )
 
 func TestApacheGoldenImage(t *testing.T) {
@@ -18,29 +18,27 @@ func TestApacheGoldenImage(t *testing.T) {
 	}
 
 	terraformOptions := &terraform.Options{
-		TerraformDir: "../../terraform/test-vm",
+		TerraformDir: "../../terraform/-vm",
 		Vars: map[string]interface{}{
-			"image_name": imageName,
+			"image_name":  imageName,
+			"project_id":  os.Getenv("GCP_PROJECT"),
 		},
 	}
 
-	// Create Test VM
 	terraform.InitAndApply(t, terraformOptions)
-
-	// Destroy VM After Test
 	defer terraform.Destroy(t, terraformOptions)
 
 	vmIP := terraform.Output(t, terraformOptions, "vm_ip")
 
 	url := "http://" + vmIP
 
-	// Retry for 3 minutes
 	http_helper.HttpGetWithRetry(
 		t,
 		url,
 		nil,
 		200,
-		3*time.Minute,
+		"Apache",
+		20,
 		10*time.Second,
 	)
 }
