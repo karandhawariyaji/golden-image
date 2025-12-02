@@ -33,6 +33,90 @@ build {
   name    = "gcp-apache-image"
   sources = ["source.googlecompute.apache"]
 
+  # -----------------------------
+  # Base OS Preparation
+  # -----------------------------
+  provisioner "shell" {
+    inline = [
+      "sudo apt update",
+      "sudo apt install -y python3 curl"
+    ]
+  }
+
+  # -----------------------------
+  # Apache Installation (Ansible)
+  # -----------------------------
+  provisioner "ansible" {
+    playbook_file = "../ansible/apache.yaml"
+  }
+
+  # -----------------------------
+  # Install GOSS
+  # -----------------------------
+  provisioner "shell" {
+    inline = [
+      "curl -fsSL https://goss.rocks/install | sh",
+      "sudo mv goss /usr/local/bin/goss",
+      "sudo chmod +x /usr/local/bin/goss"
+    ]
+  }
+
+  # -----------------------------
+  # Copy GOSS Test File
+  # -----------------------------
+  provisioner "file" {
+    source      = "../goss/goss.yaml"
+    destination = "/tmp/goss.yaml"
+  }
+
+  # -----------------------------
+  # Run GOSS Validation
+  # -----------------------------
+  provisioner "shell" {
+    inline = [
+      "sudo goss validate --gossfile /tmp/goss.yaml"
+    ]
+  }
+}
+
+
+
+
+/*packer {
+  required_plugins {
+    ansible = {
+      source  = "github.com/hashicorp/ansible"
+      version = "~> 1"
+    }
+    googlecompute = {
+      source  = "github.com/hashicorp/googlecompute"
+      version = "~> 1"
+    }
+  }
+}
+
+variable "project_id" {
+}
+variable "region" {
+  default = "us-central1"
+}
+variable "zone" {
+  default = "us-central1-a"
+}
+
+source "googlecompute" "apache" {
+  project_id          = var.project_id
+  zone                = var.zone
+  source_image_family = "ubuntu-2204-lts"
+  image_family        = "golden-apache"
+  image_name          = "golden-apache-{{timestamp}}"
+  ssh_username        = "packer"
+}
+
+build {
+  name    = "gcp-apache-image"
+  sources = ["source.googlecompute.apache"]
+
   provisioner "shell" {
     inline = [
       "sudo apt update",
@@ -43,5 +127,6 @@ build {
   provisioner "ansible" {
     playbook_file = "../ansible/apache.yaml"
   }
-}
+}*/
+
 
