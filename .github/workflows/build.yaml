@@ -57,6 +57,7 @@ jobs:
 
 
     - name: Capture Image Name
+      if: success()
       id: capture_image
       run: |
         IMAGE_NAME=$(gcloud compute images list \
