@@ -1,4 +1,4 @@
-name: Apache Golden Image - GCP   
+name: Apache Golden Image - GCP
 
 on:
   push:
@@ -25,6 +25,7 @@ jobs:
       uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.SA_KEY }}
+        export_environment_variables: true
 
     - name: Set Project
       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
@@ -56,12 +57,14 @@ jobs:
       uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.SA_KEY }}
+        export_environment_variables: true
 
     - name: Set Project
       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
     - name: Build Apache Golden Image
       id: build_image
+      shell: bash
       run: |
         set -euo pipefail
         cd packer
@@ -95,6 +98,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
+    # ✅ REQUIRED: GCP AUTH FOR TERRAFORM
+    - name: GCP Auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.SA_KEY }}
+        export_environment_variables: true
+
+    - name: Set Project
+      run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+    # # ✅ REQUIRED: ADC FOR TERRAFORM
+    # - name: Initialize ADC
+    #   run: |
+    #     gcloud auth application-default print-access-token >/dev/null
 
     - name: Setup Go
       uses: actions/setup-go@v5
@@ -130,6 +148,10 @@ jobs:
       uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.SA_KEY }}
+        export_environment_variables: true
+
+    - name: Set Project
+      run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
     - name: Delete Bad Image
       run: |
@@ -137,18 +159,6 @@ jobs:
 
         gcloud compute images delete $IMAGE_NAME \
           --project=${{ secrets.GCP_PROJECT_ID }} --quiet
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
