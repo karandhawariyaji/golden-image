@@ -1,0 +1,29 @@
+---
+- name: Verify Apache & Hardening
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Gather package facts
+      package_facts:
+
+    - name: Gather service facts
+      service_facts:
+
+    - name: Verify Apache Installed
+      assert:
+        that:
+          - "'apache2' in ansible_facts.packages"
+
+    - name: Verify Apache Running
+      assert:
+        that:
+          - ansible_facts.services['apache2.service'].state == "running"
+
+    - name: Verify Root SSH Disabled
+      command: grep "^PermitRootLogin no" /etc/ssh/sshd_config
+
+    - name: Check Apache Web Page
+      uri:
+        url: http://{{ ansible_all_ipv4_addresses[0] }}
+        status_code: 200

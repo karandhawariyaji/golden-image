@@ -1,45 +1,125 @@
 ---
 - name: Update OS
+  become: true
   apt:
     update_cache: yes
     upgrade: dist
 
 - name: Install Apache
+  become: true
   apt:
     name: apache2
     state: present
 
-- name: Start & Enable Apache
+- name: Enable & Start Apache
+  become: true
   service:
     name: apache2
     state: started
     enabled: yes
 
-- name: Allow HTTP & SSH
+- name: Allow HTTP & SSH in Firewall
+  become: true
   ufw:
     rule: allow
     port: "{{ item }}"
   loop:
-    - 22
-    - 80
+    - "22"
+    - "80"
 
 - name: Enable Firewall
+  become: true
   ufw:
     state: enabled
 
 - name: Disable root SSH login
+  become: true
   lineinfile:
     path: /etc/ssh/sshd_config
     regexp: "^PermitRootLogin"
     line: "PermitRootLogin no"
 
 - name: Restart SSH
+  become: true
   service:
     name: ssh
     state: restarted
 
-- name: Create Index Page
+- name: Create Custom Index Page
+  become: true
   copy:
     dest: /var/www/html/index.html
     content: |
       Apache Server from Golden Image
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ---
+# - name: Update OS
+#   apt:
+#     update_cache: yes
+#     upgrade: dist
+
+# - name: Install Apache
+#   apt:
+#     name: apache2
+#     state: present
+
+# - name: Start & Enable Apache
+#   service:
+#     name: apache2
+#     state: started
+#     enabled: yes
+
+# - name: Allow HTTP & SSH
+#   ufw:
+#     rule: allow
+#     port: "{{ item }}"
+#   loop:
+#     - 22
+#     - 80
+
+# - name: Enable Firewall
+#   ufw:
+#     state: enabled
+
+# - name: Disable root SSH login
+#   lineinfile:
+#     path: /etc/ssh/sshd_config
+#     regexp: "^PermitRootLogin"
+#     line: "PermitRootLogin no"
+
+# - name: Restart SSH
+#   service:
+#     name: ssh
+#     state: restarted
+
+# - name: Create Index Page
+#   copy:
+#     dest: /var/www/html/index.html
+#     content: |
+#       Apache Server from Golden Image

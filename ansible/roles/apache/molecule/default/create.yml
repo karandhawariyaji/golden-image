@@ -1,0 +1,6 @@
+---
+- name: Create
+  hosts: localhost
+  connection: local
+  tasks:
+    - command: vagrant up

@@ -1,0 +1,6 @@
+---
+- name: Destroy
+  hosts: localhost
+  connection: local
+  tasks:
+    - command: vagrant destroy -f
