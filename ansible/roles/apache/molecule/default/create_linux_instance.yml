@@ -1,49 +1,21 @@
----
-- name: Create
-  hosts: localhost
-  connection: local
-  gather_facts: false
-  no_log: "{{ molecule_no_log }}"
-  vars:
-    ssh_identity_file: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/ssh_key"
-    gcp_project_id: "{{ molecule_yml.driver.project_id | default(lookup('env', 'GCP_PROJECT_ID')) }}"
+# ansible/roles/apache/molecule/default/create_linux_instance.yml
+# Fully hardcoded Linux VM creation
 
-  tasks:
-    - name: Make sure instance_os_type is either linux or windows
-      ansible.builtin.assert:
-        that:
-          - molecule_yml.driver.instance_os_type | lower == "linux" or molecule_yml.driver.instance_os_type | lower == "windows"
-        fail_msg: "instance_os_type must be linux or windows"
-
-    - name: Get network info
-      google.cloud.gcp_compute_network_info:
-        filters:
-          - name = "{{ molecule_yml.driver.network_name | default('default') }}"
-        project: "{{ molecule_yml.driver.vpc_host_project | default(gcp_project_id) }}"
-        service_account_file: "{{ molecule_yml.driver.service_account_file | default(omit, true) }}"
-      register: my_network
-
-    - name: Get subnetwork info
-      google.cloud.gcp_compute_subnetwork_info:
-        filters:
-          - name = "{{ molecule_yml.driver.subnetwork_name | default('default') }}"
-        project: "{{ molecule_yml.driver.vpc_host_project | default(gcp_project_id) }}"
-        region: "{{ molecule_yml.driver.region }}"
-        service_account_file: "{{ molecule_yml.driver.service_account_file | default(omit, true) }}"
-      register: my_subnetwork
-
-    - name: Set external access config
-      ansible.builtin.set_fact:
-        external_access_config:
-          - access_configs:
-              - name: External NAT
-                type: ONE_TO_NAT
-      when: molecule_yml.driver.external_access
-
-    - name: Include create_linux_instance tasks
-      ansible.builtin.include_tasks: create_linux_instance.yml
-      when: molecule_yml.driver.instance_os_type | lower == "linux"
-
-  handlers:
-    - name: Import main handler tasks
-      ansible.builtin.import_tasks: handlers/main.yml
+- name: Create Linux VM instance
+  google.cloud.gcp_compute_instance:
+    name: "linuxgce-createdbymolecule"        # hardcoded instance name
+    machine_type: "n1-standard-1"             # hardcoded machine type
+    zone: "us-central1-b"                      # hardcoded zone
+    project: "robust-arcadia-475009-p4"       # hardcoded project ID
+    auth_kind: serviceaccount
+    service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
+    disks:
+      - auto_delete: true
+        boot: true
+        initialize_params:
+          source_image: "projects/debian-cloud/global/images/family/debian-11"  # hardcoded source image
+    network_interfaces:
+      - network: "global/networks/default"  # default network
+        access_configs:
+          - name: External NAT
+            type: ONE_TO_NAT
