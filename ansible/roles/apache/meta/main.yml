@@ -1,6 +1,0 @@
-galaxy_info:
-  role_name: apache
-  namespace: goldenimage
-  author: karan
-  description: Apache installation with OS hardening
-  min_ansible_version: "2.14"
