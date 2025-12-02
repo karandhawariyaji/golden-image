@@ -39,10 +39,17 @@ jobs:
           cd ansible/roles/apache/molecule/default
           ansible-galaxy collection install -r requirements.yml
 
+      - name: List files for debug
+        run: ls -R ansible/roles/apache/molecule/default
+
+
       - name: Run Molecule
         run: |
           cd ansible/roles/apache/molecule/default
+          pwd
+          ls -l
           molecule test
+          
 
   # ----------------------------
   # JOB 1: PACKER VALIDATE
