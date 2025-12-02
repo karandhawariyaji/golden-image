@@ -1,21 +1,41 @@
-# ansible/roles/apache/molecule/default/create_linux_instance.yml
-# Fully hardcoded Linux VM creation
+---
+- name: Create ssh keypair
+  community.crypto.openssh_keypair:
+    comment: "molecule user"
+    path: "{{ ssh_identity_file }}"
+  register: keypair
 
-- name: Create Linux VM instance
+- name: Create hardcoded Linux VM
   google.cloud.gcp_compute_instance:
-    name: "linuxgce-createdbymolecule"        # hardcoded instance name
-    machine_type: "n1-standard-1"             # hardcoded machine type
-    zone: "us-central1-b"                      # hardcoded zone
-    project: "robust-arcadia-475009-p4"       # hardcoded project ID
+    state: present
+    name: "molecule-linux-vm"                     # ✅ HARD CODED
+    machine_type: "n1-standard-1"                 # ✅ HARD CODED
+    zone: "us-central1-b"                         # ✅ HARD CODED
+    project: "YOUR_PROJECT_ID_HERE"               # ✅ HARD CODED
     auth_kind: serviceaccount
-    service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
+    service_account_file: "{{ lookup('env', 'GCP_SERVICE_ACCOUNT_FILE') }}"
+
+    metadata:
+      ssh-keys: "molecule:{{ keypair.public_key }}"
+
     disks:
       - auto_delete: true
         boot: true
         initialize_params:
-          source_image: "projects/debian-cloud/global/images/family/debian-11"  # hardcoded source image
+          disk_size_gb: 20
+          source_image: "projects/debian-cloud/global/images/family/debian-11"   # ✅ HARD CODED
+
     network_interfaces:
-      - network: "global/networks/default"  # default network
+      - network: "global/networks/default"        # ✅ DEFAULT NETWORK
         access_configs:
           - name: External NAT
             type: ONE_TO_NAT
+
+  register: server
+
+- name: Wait for SSH
+  ansible.builtin.wait_for:
+    port: 22
+    host: "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}"
+    search_regex: SSH
+    delay: 10
