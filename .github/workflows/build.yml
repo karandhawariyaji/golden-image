@@ -45,10 +45,11 @@ jobs:
 
       - name: Run Molecule
         run: |
-          cd ansible/roles/apache/molecule/default
-          pwd
-          ls -l
-          molecule test
+          # cd ansible/roles/apache/molecule/default
+          # pwd
+          # ls -l
+          cd ansible/roles/apache
+          molecule test -s default
           
 
   # ----------------------------
