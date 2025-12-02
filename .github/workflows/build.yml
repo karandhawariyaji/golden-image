@@ -25,6 +25,14 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Check GCP Project
+        run: |
+          echo "GCP_PROJECT_ID=$GCP_PROJECT_ID"
+          gcloud auth activate-service-account --key-file="$GCP_SERVICE_ACCOUNT_FILE"
+          gcloud config set project "$GCP_PROJECT_ID"
+          gcloud config get-value project
+
+
       - name: Install Ansible & Molecule
         run: |
           pip install 'molecule_gce'
