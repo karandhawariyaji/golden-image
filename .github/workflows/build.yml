@@ -37,7 +37,7 @@ jobs:
       - name: Install Molecule Requirements
         run: |
           cd ansible/roles/apache/molecule/default
-          ansible-galaxy collection install -r requirements.yaml
+          ansible-galaxy collection install -r requirements.yml
 
       - name: Run Molecule
         run: |
