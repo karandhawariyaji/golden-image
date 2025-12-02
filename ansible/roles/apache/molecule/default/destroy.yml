@@ -13,8 +13,8 @@
       google.cloud.gcp_compute_instance:
         name: "{{ item.name }}"
         state: absent
-        zone: "{{ item.zone | default(molecule_yml.driver.region + '-b') }}"
-        project: "{{ molecule_yml.driver.project_id | default(lookup('env', 'GCP_PROJECT_ID')) }}"
+        zone: "{{ item.zone | default('us-central1-b') }}"   # You can change to your preferred zone
+        project: "robust-arcadia-475009-p4"                # Hardcoded project ID
         auth_kind: serviceaccount
         service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
       loop: "{{ molecule_yml.platforms }}"
@@ -36,3 +36,56 @@
   handlers:
     - name: Import main handler tasks
       ansible.builtin.import_tasks: handlers/main.yml
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ---
+# - name: Destroy
+#   hosts: localhost
+#   connection: local
+#   gather_facts: false
+#   no_log: "{{ molecule_no_log | default(false) }}"
+
+#   vars:
+#     async_results: []
+
+#   tasks:
+#     - name: Destroy molecule instance(s)
+#       google.cloud.gcp_compute_instance:
+#         name: "{{ item.name }}"
+#         state: absent
+#         zone: "{{ item.zone | default(molecule_yml.driver.region + '-b') }}"
+#         project: "{{ molecule_yml.driver.project_id | default(lookup('env', 'GCP_PROJECT_ID')) }}"
+#         auth_kind: serviceaccount
+#         service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
+#       loop: "{{ molecule_yml.platforms }}"
+#       async: 7200
+#       poll: 0
+#       register: async_results
+#       ignore_errors: true
+
+#     - name: Wait for instance(s) deletion to complete
+#       ansible.builtin.async_status:
+#         jid: "{{ item.ansible_job_id }}"
+#       register: server
+#       until: server.finished
+#       retries: 300
+#       delay: 10
+#       loop: "{{ async_results.results | default([]) }}"
+#       when: async_results.results is defined and async_results.results | length > 0
+
+#   handlers:
+#     - name: Import main handler tasks
+#       ansible.builtin.import_tasks: handlers/main.yml
+
