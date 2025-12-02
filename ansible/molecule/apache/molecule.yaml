@@ -14,7 +14,8 @@ platforms:
 provisioner:
   name: ansible
   playbooks:
-    converge: converge.yml
+    converge: converge.yaml
 
 verifier:
   name: ansible
+
