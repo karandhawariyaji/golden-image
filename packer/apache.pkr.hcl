@@ -48,7 +48,7 @@ build {
   # -----------------------------
   provisioner "shell" {
     inline = [
-      "curl -fsSL https://goss.rocks/install | sh",
+      "curl -fsSL https://goss.rocks/install | sudo sh",
       "sudo mv goss /usr/local/bin/goss",
       "sudo chmod +x /usr/local/bin/goss"
     ]
@@ -121,5 +121,6 @@ build {
     playbook_file = "../ansible/apache.yaml"
   }
 }*/
+
 
 
