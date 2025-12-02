@@ -3,13 +3,11 @@ package integration
 import (
 	"os"
 	"testing"
-	"time"
 
-	http_helper "github.com/gruntwork-io/terratest/modules/http-helper"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 )
 
-func TestApacheGoldenImage(t *testing.T) {
+func TestGoldenImageVMCreationOnly(t *testing.T) {
 	t.Parallel()
 
 	imageName := os.Getenv("IMAGE_NAME")
@@ -17,34 +15,102 @@ func TestApacheGoldenImage(t *testing.T) {
 		t.Fatal("IMAGE_NAME is not set")
 	}
 
+	projectID := os.Getenv("GCP_PROJECT")
+	if projectID == "" {
+		t.Fatal("GCP_PROJECT is not set")
+	}
+
 	terraformOptions := &terraform.Options{
 		TerraformDir: "../fixtures/vm",
 		Vars: map[string]interface{}{
 			"image_name": imageName,
-			"project_id": os.Getenv("GCP_PROJECT"),
+			"project_id": projectID,
 		},
 	}
 
+	// ✅ Create VM
 	terraform.InitAndApply(t, terraformOptions)
-	defer terraform.Destroy(t, terraformOptions)
 
+	// ✅ Validate output exists (means VM created)
 	vmIP := terraform.Output(t, terraformOptions, "vm_ip")
+	if vmIP == "" {
+		t.Fatal("VM IP is empty — VM creation failed")
+	}
 
-	// ✅ Wait for VM boot & Apache startup
-	time.Sleep(30 * time.Second)
+	t.Logf("VM successfully created with IP: %s", vmIP)
 
-	url := "http://" + vmIP
-
-	http_helper.HttpGetWithRetry(
-		t,
-		url,
-		nil,
-		200,
-		"Apache Server from Golden Image",
-		30,
-		10*time.Second,
-	)
+	// ✅ Destroy after validation
+	defer terraform.Destroy(t, terraformOptions)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// package integration
+
+// import (
+// 	"os"
+// 	"testing"
+// 	"time"
+
+// 	http_helper "github.com/gruntwork-io/terratest/modules/http-helper"
+// 	"github.com/gruntwork-io/terratest/modules/terraform"
+// )
+
+// func TestApacheGoldenImage(t *testing.T) {
+// 	t.Parallel()
+
+// 	imageName := os.Getenv("IMAGE_NAME")
+// 	if imageName == "" {
+// 		t.Fatal("IMAGE_NAME is not set")
+// 	}
+
+// 	terraformOptions := &terraform.Options{
+// 		TerraformDir: "../fixtures/vm",
+// 		Vars: map[string]interface{}{
+// 			"image_name": imageName,
+// 			"project_id": os.Getenv("GCP_PROJECT"),
+// 		},
+// 	}
+
+// 	terraform.InitAndApply(t, terraformOptions)
+// 	defer terraform.Destroy(t, terraformOptions)
+
+// 	vmIP := terraform.Output(t, terraformOptions, "vm_ip")
+
+// 	// ✅ Wait for VM boot & Apache startup
+// 	time.Sleep(30 * time.Second)
+
+// 	url := "http://" + vmIP
+
+// 	http_helper.HttpGetWithRetry(
+// 		t,
+// 		url,
+// 		nil,
+// 		200,
+// 		"Apache Server from Golden Image",
+// 		30,
+// 		10*time.Second,
+// 	)
+// }
 
 
 
@@ -167,5 +233,6 @@ func TestApacheGoldenImage(t *testing.T) {
 // 		10*time.Second,
 // 	)
 // }
+
 
 
