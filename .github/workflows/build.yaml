@@ -5,8 +5,11 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+# ----------------------------
+# ✅ JOB 1: PACKER VALIDATE
+# ----------------------------
 jobs:
-  build-apache-image:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,119 +29,272 @@ jobs:
     - name: Set Project
       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
-    # ✅ UNIT TEST
     - name: Packer Validate
       run: |
         cd packer
         packer init .
         packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
 
-    # # ✅ BUILD IMAGE
-    # - name: Build Apache Image
-    #   run: |
-    #     cd packer
-    #     packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
 
-    # - name: Build Apache Golden Image
-    #   id: packer_build
-    #   run: |
-    #     cd packer
-    #     packer build apache-image \
-    #       -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . > packer-output.log
+# ----------------------------
+# ✅ JOB 2: BUILD IMAGE
+# ----------------------------
+  build:
+    needs: validate
+    runs-on: ubuntu-latest
 
-    # - name: Build Apache Golden Image
-    #   id: packer_build
-    #   run: |
-    #     cd packer
-    #     packer init .
-    #     packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
-    #     packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
+    outputs:
+      IMAGE_NAME: ${{ steps.build_image.outputs.IMAGE_NAME }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Packer
+      uses: hashicorp/setup-packer@v3
+
+    - name: GCP Auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.SA_KEY }}
+
+    - name: Set Project
+      run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
     - name: Build Apache Golden Image
-      id: packer_build
+      id: build_image
       run: |
-        set -euo pipefail   # This ensures the step FAILS if packer fails
+        set -euo pipefail
         cd packer
-    
+
         packer init .
-        packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
-    
-        packer build -machine-readable -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
-    
-        # -------------------------------
-        # Capture the newly created image
-        # -------------------------------
+
+        packer build -machine-readable \
+          -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . \
+          | tee packer-output.log
+
         IMAGE_NAME=$(grep 'artifact,0,id' packer-output.log | cut -d',' -f6)
-    
+
         if [ -z "$IMAGE_NAME" ]; then
-          echo "ERROR: No image was created by Packer!"
+          echo "ERROR: No image was created!"
           exit 1
         fi
-    
+
         echo "IMAGE_NAME=$IMAGE_NAME"
-        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_OUTPUT
 
 
-       
+# ----------------------------
+# ✅ JOB 3: TERRATEST
+# ----------------------------
+  terratest:
+    needs: build
+    runs-on: ubuntu-latest
 
+    env:
+      IMAGE_NAME: ${{ needs.build.outputs.IMAGE_NAME }}
 
-    # - name: Capture Image Name
-    #   if: success()
-    #   id: capture_image
-    #   run: |
-    #     IMAGE_NAME=$(gcloud compute images list \
-    #       --project=${{ secrets.GCP_PROJECT_ID }} \
-    #       --filter="name~'apache'" \
-    #       --sort-by=~creationTimestamp \
-    #       --limit=1 \
-    #       --format="value(name)")
-    
-    #     if [ -z "$IMAGE_NAME" ]; then
-    #       echo "ERROR: Image not found!"
-    #       exit 1
-    #     fi
-    
-    #     echo "IMAGE_NAME=$IMAGE_NAME"
-    #     echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+    steps:
+    - uses: actions/checkout@v4
 
-
-
-    # ----------------------------
-    # SETUP GO FOR TERRATEST
-    # ----------------------------
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
         go-version: 1.21
 
-
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
-    - name: Set Terraform Binary for Terratest
-      run: echo "TERRATEST_TERRAFORM_BINARY=terraform" >> $GITHUB_ENV
-
-
-    # ----------------------------
-    # ✅ INTEGRATION TEST (TERRATEST)
-    # ----------------------------
-    - name: Run Terratest on Image
-      id: terratest
+    - name: Run Terratest
       run: |
         cd test
         go mod tidy
+
         GCP_PROJECT=${{ secrets.GCP_PROJECT_ID }} \
-        IMAGE_NAME=${{ env.IMAGE_NAME }} \
+        IMAGE_NAME=$IMAGE_NAME \
         go test -v -timeout 30m ./integration
+
+
+# ----------------------------
+# ✅ JOB 4: DELETE IMAGE (ONLY IF TERRATEST FAILS)
+# ----------------------------
+  cleanup:
+    needs: [build, terratest]
+    if: needs.terratest.result == 'failure'
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: ${{ needs.build.outputs.IMAGE_NAME }}
+
+    steps:
+    - name: GCP Auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.SA_KEY }}
+
+    - name: Delete Bad Image
+      run: |
+        echo "❌ Terratest failed. Deleting bad image: $IMAGE_NAME"
+
+        gcloud compute images delete $IMAGE_NAME \
+          --project=${{ secrets.GCP_PROJECT_ID }} --quiet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# name: Apache Golden Image - GCP   
+
+# on:
+#   push:
+#     branches: ["main"]
+#   workflow_dispatch:
+
+# jobs:
+#   build-apache-image:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - uses: actions/checkout@v4
+
+#     - name: Setup Packer
+#       uses: hashicorp/setup-packer@v3
+
+#     - name: Install Ansible
+#       run: sudo apt-get update && sudo apt-get install -y ansible
+
+#     - name: GCP Auth
+#       uses: google-github-actions/auth@v2
+#       with:
+#         credentials_json: ${{ secrets.SA_KEY }}
+
+#     - name: Set Project
+#       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+#     # ✅ UNIT TEST
+#     - name: Packer Validate
+#       run: |
+#         cd packer
+#         packer init .
+#         packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+
+#     # # ✅ BUILD IMAGE
+#     # - name: Build Apache Image
+#     #   run: |
+#     #     cd packer
+#     #     packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+
+#     # - name: Build Apache Golden Image
+#     #   id: packer_build
+#     #   run: |
+#     #     cd packer
+#     #     packer build apache-image \
+#     #       -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . > packer-output.log
+
+#     # - name: Build Apache Golden Image
+#     #   id: packer_build
+#     #   run: |
+#     #     cd packer
+#     #     packer init .
+#     #     packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+#     #     packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
+
+#     - name: Build Apache Golden Image
+#       id: packer_build
+#       run: |
+#         set -euo pipefail   # This ensures the step FAILS if packer fails
+#         cd packer
+    
+#         packer init .
+#         packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+    
+#         packer build -machine-readable -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
+    
+#         # -------------------------------
+#         # Capture the newly created image
+#         # -------------------------------
+#         IMAGE_NAME=$(grep 'artifact,0,id' packer-output.log | cut -d',' -f6)
+    
+#         if [ -z "$IMAGE_NAME" ]; then
+#           echo "ERROR: No image was created by Packer!"
+#           exit 1
+#         fi
+    
+#         echo "IMAGE_NAME=$IMAGE_NAME"
+#         echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+
+       
+
+
+#     # - name: Capture Image Name
+#     #   if: success()
+#     #   id: capture_image
+#     #   run: |
+#     #     IMAGE_NAME=$(gcloud compute images list \
+#     #       --project=${{ secrets.GCP_PROJECT_ID }} \
+#     #       --filter="name~'apache'" \
+#     #       --sort-by=~creationTimestamp \
+#     #       --limit=1 \
+#     #       --format="value(name)")
+    
+#     #     if [ -z "$IMAGE_NAME" ]; then
+#     #       echo "ERROR: Image not found!"
+#     #       exit 1
+#     #     fi
+    
+#     #     echo "IMAGE_NAME=$IMAGE_NAME"
+#     #     echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+
+
+#     # ----------------------------
+#     # SETUP GO FOR TERRATEST
+#     # ----------------------------
+#     - name: Setup Go
+#       uses: actions/setup-go@v5
+#       with:
+#         go-version: 1.21
+
+
+#     - name: Setup Terraform
+#       uses: hashicorp/setup-terraform@v3
+
+#     - name: Set Terraform Binary for Terratest
+#       run: echo "TERRATEST_TERRAFORM_BINARY=terraform" >> $GITHUB_ENV
+
+
+#     # ----------------------------
+#     # ✅ INTEGRATION TEST (TERRATEST)
+#     # ----------------------------
+#     - name: Run Terratest on Image
+#       id: terratest
+#       run: |
+#         cd test
+#         go mod tidy
+#         GCP_PROJECT=${{ secrets.GCP_PROJECT_ID }} \
+#         IMAGE_NAME=${{ env.IMAGE_NAME }} \
+#         go test -v -timeout 30m ./integration
     
 
 
-    - name: Delete Image If Terratest Fails
-      if: steps.terratest.outcome == 'failure'
-      run: |
-        echo "❌ Terratest failed. Deleting bad image: $IMAGE_NAME"
-        gcloud compute images delete $IMAGE_NAME \
-          --project=${{ secrets.GCP_PROJECT_ID }} --quiet
+#     - name: Delete Image If Terratest Fails
+#       if: steps.terratest.outcome == 'failure'
+#       run: |
+#         echo "❌ Terratest failed. Deleting bad image: $IMAGE_NAME"
+#         gcloud compute images delete $IMAGE_NAME \
+#           --project=${{ secrets.GCP_PROJECT_ID }} --quiet
 
 
 
