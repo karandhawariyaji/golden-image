@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 # ----------------------------
-# ✅ JOB 1: PACKER VALIDATE
+#  JOB 1: PACKER VALIDATE
 # ----------------------------
 jobs:
   validate:
@@ -38,7 +38,7 @@ jobs:
 
 
 # ----------------------------
-# ✅ JOB 2: BUILD IMAGE
+#  JOB 2: BUILD IMAGE (WITH GOSS INSIDE PACKER)
 # ----------------------------
   build:
     needs: validate
@@ -49,9 +49,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Setup Packer
-      uses: hashicorp/setup-packer@v3
+    - uses: hashicorp/setup-packer@v3
 
     - name: GCP Auth
       uses: google-github-actions/auth@v2
@@ -64,7 +62,6 @@ jobs:
 
     - name: Build Apache Golden Image
       id: build_image
-      shell: bash
       run: |
         set -euo pipefail
         cd packer
@@ -72,25 +69,63 @@ jobs:
         packer init .
 
         packer build -machine-readable \
-          -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . \
-          | tee packer-output.log
+          -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer.log
 
-        IMAGE_NAME=$(grep 'artifact,0,id' packer-output.log | cut -d',' -f6)
+        IMAGE_NAME=$(grep 'artifact,0,id' packer.log | cut -d',' -f6)
 
         if [ -z "$IMAGE_NAME" ]; then
-          echo "ERROR: No image was created!"
+          echo "ERROR: Image not created"
           exit 1
         fi
 
-        echo "IMAGE_NAME=$IMAGE_NAME"
-        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_OUTPUT
+        echo "IMAGE_NAME=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
 
 
 # ----------------------------
-# ✅ JOB 3: TERRATEST
+#  JOB 3: TRIVY IMAGE SECURITY SCAN ( FIXED)
+# ----------------------------
+  trivy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: ${{ needs.build.outputs.IMAGE_NAME }}
+
+    steps:
+    - uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.SA_KEY }}
+
+    - name: Set Project
+      run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Install Trivy
+      run: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+
+    #  Create temp VM from image for scanning
+    - name: Create Temp Scan VM
+      run: |
+        gcloud compute instances create trivy-vm \
+          --zone=us-central1-a \
+          --image=$IMAGE_NAME
+
+    #  Trivy filesystem scan
+    - name: Trivy Scan VM Disk
+      run: |
+        trivy fs --severity HIGH,CRITICAL --exit-code 1 /
+
+    #  Remove temp VM
+    - name: Delete Temp VM
+      run: |
+        gcloud compute instances delete trivy-vm --zone=us-central1-a --quiet
+
+
+# ----------------------------
+#  JOB 4: TERRATEST (ONLY AFTER TRIVY  PASSES)
 # ----------------------------
   terratest:
-    needs: build
+    needs: trivy
     runs-on: ubuntu-latest
 
     env:
@@ -99,28 +134,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # ✅ REQUIRED: GCP AUTH FOR TERRAFORM
-    - name: GCP Auth
-      uses: google-github-actions/auth@v2
+    - uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.SA_KEY }}
-        export_environment_variables: true
 
     - name: Set Project
       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
-    # # ✅ REQUIRED: ADC FOR TERRAFORM
-    # - name: Initialize ADC
-    #   run: |
-    #     gcloud auth application-default print-access-token >/dev/null
-
-    - name: Setup Go
-      uses: actions/setup-go@v5
+    - uses: actions/setup-go@v5
       with:
         go-version: 1.21
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+    - uses: hashicorp/setup-terraform@v3
 
     - name: Run Terratest
       run: |
@@ -133,32 +158,198 @@ jobs:
 
 
 # ----------------------------
-# ✅ JOB 4: DELETE IMAGE (ONLY IF TERRATEST FAILS)
+#  JOB 5: DELETE IMAGE IF TRIVY OR TERRATEST FAILS 
 # ----------------------------
   cleanup:
-    needs: [build, terratest]
-    if: needs.terratest.result == 'failure'
+    needs: [build, trivy, terratest]
+    if: always() && (needs.trivy.result == 'failure' || needs.terratest.result == 'failure')
     runs-on: ubuntu-latest
 
     env:
       IMAGE_NAME: ${{ needs.build.outputs.IMAGE_NAME }}
 
     steps:
-    - name: GCP Auth
-      uses: google-github-actions/auth@v2
+    - uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.SA_KEY }}
-        export_environment_variables: true
 
     - name: Set Project
       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
     - name: Delete Bad Image
       run: |
-        echo "❌ Terratest failed. Deleting bad image: $IMAGE_NAME"
+        echo "❌ Deleting bad image: $IMAGE_NAME"
+        gcloud compute images delete $IMAGE_NAME --quiet
 
-        gcloud compute images delete $IMAGE_NAME \
-          --project=${{ secrets.GCP_PROJECT_ID }} --quiet
+
+
+
+
+
+
+
+
+# name: Apache Golden Image - GCP
+
+# on:
+#   push:
+#     branches: ["main"]
+#   workflow_dispatch:
+
+# # ----------------------------
+# #  JOB 1: PACKER VALIDATE
+# # ----------------------------
+# jobs:
+#   validate:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - uses: actions/checkout@v4
+
+#     - name: Setup Packer
+#       uses: hashicorp/setup-packer@v3
+
+#     - name: Install Ansible
+#       run: sudo apt-get update && sudo apt-get install -y ansible
+
+#     - name: GCP Auth
+#       uses: google-github-actions/auth@v2
+#       with:
+#         credentials_json: ${{ secrets.SA_KEY }}
+#         export_environment_variables: true
+
+#     - name: Set Project
+#       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+#     - name: Packer Validate
+#       run: |
+#         cd packer
+#         packer init .
+#         packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+
+
+# # ----------------------------
+# #  JOB 2: BUILD IMAGE
+# # ----------------------------
+#   build:
+#     needs: validate
+#     runs-on: ubuntu-latest
+
+#     outputs:
+#       IMAGE_NAME: ${{ steps.build_image.outputs.IMAGE_NAME }}
+
+#     steps:
+#     - uses: actions/checkout@v4
+
+#     - name: Setup Packer
+#       uses: hashicorp/setup-packer@v3
+
+#     - name: GCP Auth
+#       uses: google-github-actions/auth@v2
+#       with:
+#         credentials_json: ${{ secrets.SA_KEY }}
+#         export_environment_variables: true
+
+#     - name: Set Project
+#       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+#     - name: Build Apache Golden Image
+#       id: build_image
+#       shell: bash
+#       run: |
+#         set -euo pipefail
+#         cd packer
+
+#         packer init .
+
+#         packer build -machine-readable \
+#           -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . \
+#           | tee packer-output.log
+
+#         IMAGE_NAME=$(grep 'artifact,0,id' packer-output.log | cut -d',' -f6)
+
+#         if [ -z "$IMAGE_NAME" ]; then
+#           echo "ERROR: No image was created!"
+#           exit 1
+#         fi
+
+#         echo "IMAGE_NAME=$IMAGE_NAME"
+#         echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
+
+# # ----------------------------
+# #  JOB 3: TERRATEST
+# # ----------------------------
+#   terratest:
+#     needs: build
+#     runs-on: ubuntu-latest
+
+#     env:
+#       IMAGE_NAME: ${{ needs.build.outputs.IMAGE_NAME }}
+
+#     steps:
+#     - uses: actions/checkout@v4
+
+#     #  REQUIRED: GCP AUTH FOR TERRAFORM
+#     - name: GCP Auth
+#       uses: google-github-actions/auth@v2
+#       with:
+#         credentials_json: ${{ secrets.SA_KEY }}
+#         export_environment_variables: true
+
+#     - name: Set Project
+#       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+#     # #  REQUIRED: ADC FOR TERRAFORM
+#     # - name: Initialize ADC
+#     #   run: |
+#     #     gcloud auth application-default print-access-token >/dev/null
+
+#     - name: Setup Go
+#       uses: actions/setup-go@v5
+#       with:
+#         go-version: 1.21
+
+#     - name: Setup Terraform
+#       uses: hashicorp/setup-terraform@v3
+
+#     - name: Run Terratest
+#       run: |
+#         cd test
+#         go mod tidy
+
+#         GCP_PROJECT=${{ secrets.GCP_PROJECT_ID }} \
+#         IMAGE_NAME=$IMAGE_NAME \
+#         go test -v -timeout 30m ./integration
+
+
+# # ----------------------------
+# #  JOB 4: DELETE IMAGE (ONLY IF TERRATEST FAILS)
+# # ----------------------------
+#   cleanup:
+#     needs: [build, terratest]
+#     if: needs.terratest.result == 'failure'
+#     runs-on: ubuntu-latest
+
+#     env:
+#       IMAGE_NAME: ${{ needs.build.outputs.IMAGE_NAME }}
+
+#     steps:
+#     - name: GCP Auth
+#       uses: google-github-actions/auth@v2
+#       with:
+#         credentials_json: ${{ secrets.SA_KEY }}
+#         export_environment_variables: true
+
+#     - name: Set Project
+#       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+#     - name: Delete Bad Image
+#       run: |
+#         echo "❌ Terratest failed. Deleting bad image: $IMAGE_NAME"
+
+#         gcloud compute images delete $IMAGE_NAME \
+#           --project=${{ secrets.GCP_PROJECT_ID }} --quiet
 
 
 
@@ -192,14 +383,14 @@ jobs:
 #     - name: Set Project
 #       run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
 
-#     # ✅ UNIT TEST
+#     #  UNIT TEST
 #     - name: Packer Validate
 #       run: |
 #         cd packer
 #         packer init .
 #         packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
 
-#     # # ✅ BUILD IMAGE
+#     # #  BUILD IMAGE
 #     # - name: Build Apache Image
 #     #   run: |
 #     #     cd packer
@@ -286,7 +477,7 @@ jobs:
 
 
 #     # ----------------------------
-#     # ✅ INTEGRATION TEST (TERRATEST)
+#     #  INTEGRATION TEST (TERRATEST)
 #     # ----------------------------
 #     - name: Run Terratest on Image
 #       id: terratest
