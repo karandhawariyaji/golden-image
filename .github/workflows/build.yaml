@@ -383,24 +383,24 @@ on:
 
 jobs:
   molecule-test:
-  runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
+  
+    steps:
+    - uses: actions/checkout@v4
 
-  steps:
-  - uses: actions/checkout@v4
-
-  - name: Setup Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: '3.10'
-
-  - name: Install Ansible & Molecule
-    run: |
-      pip install ansible molecule molecule-docker docker
-
-  - name: Run Molecule Test
-    run: |
-      cd ansible
-      molecule test -s apache
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+  
+    - name: Install Ansible & Molecule
+      run: |
+        pip install ansible molecule molecule-docker docker
+  
+    - name: Run Molecule Test
+      run: |
+        cd ansible
+        molecule test -s apache
 
   # ----------------------------
   #  JOB 1: PACKER VALIDATE
