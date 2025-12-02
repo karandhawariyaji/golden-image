@@ -88,14 +88,6 @@ packer {
   }
 }
 
-variable "project_id" {
-}
-variable "region" {
-  default = "us-central1"
-}
-variable "zone" {
-  default = "us-central1-a"
-}
 
 source "googlecompute" "apache" {
   project_id          = var.project_id
@@ -121,6 +113,7 @@ build {
     playbook_file = "../ansible/apache.yaml"
   }
 }
+
 
 
 
