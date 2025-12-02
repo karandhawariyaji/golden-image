@@ -46,34 +46,60 @@ jobs:
     #     packer build apache-image \
     #       -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . > packer-output.log
 
+    # - name: Build Apache Golden Image
+    #   id: packer_build
+    #   run: |
+    #     cd packer
+    #     packer init .
+    #     packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
+    #     packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
+
     - name: Build Apache Golden Image
       id: packer_build
       run: |
+        set -euo pipefail   # This ensures the step FAILS if packer fails
         cd packer
+    
         packer init .
         packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
-        packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
-
-
-
-    - name: Capture Image Name
-      if: success()
-      id: capture_image
-      run: |
-        IMAGE_NAME=$(gcloud compute images list \
-          --project=${{ secrets.GCP_PROJECT_ID }} \
-          --filter="name~'apache'" \
-          --sort-by=~creationTimestamp \
-          --limit=1 \
-          --format="value(name)")
     
-        if [ -z "$IMAGE_NAME" ]; then
-          echo "ERROR: Image not found!"
+        packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
+    
+        # -------------------------------
+        # Capture the newly created image
+        # -------------------------------
+        IMAGE_ID=$(grep 'artifact,0,id' packer-output.log | cut -d',' -f6)
+    
+        if [ -z "$IMAGE_ID" ]; then
+          echo "ERROR: No image was created by Packer!"
           exit 1
         fi
     
-        echo "IMAGE_NAME=$IMAGE_NAME"
-        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+        echo "IMAGE_ID=$IMAGE_ID"
+        echo "IMAGE_ID=$IMAGE_ID" >> $GITHUB_ENV
+
+
+       
+
+
+    # - name: Capture Image Name
+    #   if: success()
+    #   id: capture_image
+    #   run: |
+    #     IMAGE_NAME=$(gcloud compute images list \
+    #       --project=${{ secrets.GCP_PROJECT_ID }} \
+    #       --filter="name~'apache'" \
+    #       --sort-by=~creationTimestamp \
+    #       --limit=1 \
+    #       --format="value(name)")
+    
+    #     if [ -z "$IMAGE_NAME" ]; then
+    #       echo "ERROR: Image not found!"
+    #       exit 1
+    #     fi
+    
+    #     echo "IMAGE_NAME=$IMAGE_NAME"
+    #     echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
 
 
