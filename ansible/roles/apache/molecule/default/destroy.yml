@@ -13,7 +13,7 @@
       google.cloud.gcp_compute_instance:
         name: "{{ item.name }}"
         state: absent
-        zone: "{{ item.zone | default('us-central1-b') }}"   # You can change to your preferred zone
+        zone: "us-central1-b" # You can change to your preferred zone
         project: "robust-arcadia-475009-p4"                # Hardcoded project ID
         auth_kind: serviceaccount
         service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
@@ -88,4 +88,5 @@
 #   handlers:
 #     - name: Import main handler tasks
 #       ansible.builtin.import_tasks: handlers/main.yml
+
 
