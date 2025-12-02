@@ -123,6 +123,7 @@ jobs:
     # ✅ INTEGRATION TEST (TERRATEST)
     # ----------------------------
     - name: Run Terratest on Image
+      id: terratest
       run: |
         cd test
         go mod tidy
@@ -132,11 +133,12 @@ jobs:
     
 
 
-    - name: Delete Image If Tests Fail
-      if: failure()
+    - name: Delete Image If Terratest Fails
+      if: steps.terratest.outcome == 'failure'
       run: |
-        echo "❌ Tests failed. Deleting bad image: $IMAGE_NAME"
+        echo "❌ Terratest failed. Deleting bad image: $IMAGE_NAME"
         gcloud compute images delete $IMAGE_NAME \
           --project=${{ secrets.GCP_PROJECT_ID }} --quiet
+
 
 
