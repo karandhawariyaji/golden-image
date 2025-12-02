@@ -1,25 +1,23 @@
 ---
+dependency:
+  name: galaxy
+
 driver:
-  name: vagrant
-  provider:
-    name: virtualbox
+  name: gce
+  project_id: "{{ lookup('env','GCP_PROJECT_ID') }}"
+  auth_kind: serviceaccount
+  service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
+  region: us-west1
+  external_access: false
+  instance_os_type: linux
 
 platforms:
-  - name: alma9
-    box: almalinux/9
-    box_version: "9.5.20241203"
-    memory: 2048
-    cpus: 2
-    interfaces:
-      - auto_config: true
-        network_name: private_network
-        type: static
-        ip: 192.168.56.10
+  - name: linuxgce-createdbymolecule
+    machine_type: n1-standard-1
+    zone:
 
 provisioner:
   name: ansible
-  env:
-    ANSIBLE_FORCE_COLOR: "true"
 
 verifier:
   name: ansible
