@@ -407,6 +407,7 @@ jobs:
   # ----------------------------
 
   validate:
+    needs: molecule-test
     runs-on: ubuntu-latest
 
     steps:
