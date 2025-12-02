@@ -3,10 +3,14 @@
   hosts: localhost
   connection: local
   gather_facts: false
-  no_log: "{{ molecule_no_log }}"
+  no_log: "{{ molecule_no_log | default(false) }}"
+
   vars:
     ssh_identity_file: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/ssh_key"
-    gcp_project_id: "{{ molecule_yml.driver.project_id | default(lookup('env', 'GCP_PROJECT_ID')) }}"
+    gcp_project_id: "robust-arcadia-475009-p4"
+    gcp_zone: "us-central1-b"
+    gcp_region: "us-central1"
+    gcp_sa_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
 
   tasks:
     - name: Make sure instance_os_type is either linux or windows
@@ -19,17 +23,19 @@
       google.cloud.gcp_compute_network_info:
         filters:
           - name = "{{ molecule_yml.driver.network_name | default('default') }}"
-        project: "{{ molecule_yml.driver.vpc_host_project | default(gcp_project_id) }}"
-        service_account_file: "{{ molecule_yml.driver.service_account_file | default(omit, true) }}"
+        project: "{{ gcp_project_id }}"
+        auth_kind: serviceaccount
+        service_account_file: "{{ gcp_sa_file }}"
       register: my_network
 
     - name: Get subnetwork info
       google.cloud.gcp_compute_subnetwork_info:
         filters:
           - name = "{{ molecule_yml.driver.subnetwork_name | default('default') }}"
-        project: "{{ molecule_yml.driver.vpc_host_project | default(gcp_project_id) }}"
-        region: "{{ molecule_yml.driver.region }}"
-        service_account_file: "{{ molecule_yml.driver.service_account_file | default(omit, true) }}"
+        project: "{{ gcp_project_id }}"
+        region: "{{ gcp_region }}"
+        auth_kind: serviceaccount
+        service_account_file: "{{ gcp_sa_file }}"
       register: my_subnetwork
 
     - name: Set external access config
