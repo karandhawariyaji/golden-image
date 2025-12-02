@@ -63,7 +63,7 @@ jobs:
         packer init .
         packer validate -var "project_id=${{ secrets.GCP_PROJECT_ID }}" .
     
-        packer build -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
+        packer build -machine-readable -var "project_id=${{ secrets.GCP_PROJECT_ID }}" . | tee packer-output.log
     
         # -------------------------------
         # Capture the newly created image
