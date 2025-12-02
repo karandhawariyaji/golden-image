@@ -11,14 +11,7 @@ packer {
   }
 }
 
-variable "project_id" {
-}
-variable "region" {
-  default = "us-central1"
-}
-variable "zone" {
-  default = "us-central1-a"
-}
+
 
 source "googlecompute" "apache" {
   project_id          = var.project_id
@@ -65,7 +58,7 @@ build {
   # Copy GOSS Test File
   # -----------------------------
   provisioner "file" {
-    source      = "../goss/goss.yaml"
+    source      = "goss.yaml"
     destination = "/tmp/goss.yaml"
   }
 

@@ -1,0 +1,22 @@
+package:
+  apache2:
+    installed: true
+
+service:
+  apache2:
+    enabled: true
+    running: true
+
+port:
+  tcp:80:
+    listening: true
+
+file:
+  /var/www/html/index.html:
+    exists: true
+    contains:
+      - "Apache Server from Golden Image"
+
+command:
+  apache2 -v:
+    exit-status: 0
