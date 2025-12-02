@@ -1,4 +1,4 @@
-packer {
+/*packer {
   required_plugins {
     ansible = {
       source  = "github.com/hashicorp/ansible"
@@ -71,11 +71,11 @@ build {
     ]
   }
 }
+*/
 
 
 
-
-/*packer {
+packer {
   required_plugins {
     ansible = {
       source  = "github.com/hashicorp/ansible"
@@ -120,7 +120,7 @@ build {
   provisioner "ansible" {
     playbook_file = "../ansible/apache.yaml"
   }
-}*/
+}
 
 
 
