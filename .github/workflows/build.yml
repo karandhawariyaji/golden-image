@@ -25,6 +25,12 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: GCP Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.SA_KEY }}
+          export_environment_variables: true
+
       - name: Check GCP Project
         run: |
           echo "GCP_PROJECT_ID=$GCP_PROJECT_ID"
