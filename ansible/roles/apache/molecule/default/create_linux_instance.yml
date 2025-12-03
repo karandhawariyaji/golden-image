@@ -26,7 +26,7 @@
           source_image: "projects/debian-cloud/global/images/family/debian-11"   # ✅ HARD CODED
 
     network_interfaces:
-      - network: "global/networks/default"        # ✅ DEFAULT NETWORK
+      - network: "https://www.googleapis.com/compute/v1/projects/robust-arcadia-475009-p4/global/networks/default"        # ✅ DEFAULT NETWORK
         access_configs:
           - name: External NAT
             type: ONE_TO_NAT
@@ -39,5 +39,6 @@
     host: "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}"
     search_regex: SSH
     delay: 10
+
 
 
