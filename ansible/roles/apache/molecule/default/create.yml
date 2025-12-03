@@ -60,14 +60,16 @@
       ansible.builtin.copy:
         dest: "{{ molecule_instance_config }}"
         content: |
-          {
-            "instance": [
-              {
-                "name": "linuxgce-createdbymolecule",
-                "address": "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}"
-              }
-            ]
-          }
+          [
+            {
+              "instance": "linuxgce-createdbymolecule",
+              "address": "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}",
+              "user": "molecule",
+              "port": 22,
+              "identity_file": "{{ ssh_identity_file }}"
+            }
+          ]
+
 
   handlers:
     - name: Import main handler tasks
@@ -206,6 +208,7 @@
 #   handlers:
 #     - name: Import main handler tasks
 #       ansible.builtin.import_tasks: handlers/main.yml
+
 
 
 
