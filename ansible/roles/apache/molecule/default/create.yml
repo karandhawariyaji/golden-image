@@ -3,7 +3,7 @@
   hosts: localhost
   connection: local
   gather_facts: false
-  no_log: true
+  no_log: false
 
   vars:
     ssh_identity_file: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/ssh_key"
@@ -123,5 +123,6 @@
 #   handlers:
 #     - name: Import main handler tasks
 #       ansible.builtin.import_tasks: handlers/main.yml
+
 
 
