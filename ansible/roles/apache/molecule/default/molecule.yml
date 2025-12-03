@@ -4,20 +4,57 @@ dependency:
 
 driver:
   name: gce
-  project_id: "{{ lookup('env','GCP_PROJECT_ID') }}"
+  project_id: "robust-arcadia-475009-p4"   # ✅ Hardcoded project ID
   auth_kind: serviceaccount
   service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
-  region: us-west1
+  region: us-central1
   external_access: false
   instance_os_type: linux
 
 platforms:
   - name: linuxgce-createdbymolecule
     machine_type: n1-standard-1
-    zone:
+    zone: us-central1-a                   # ✅ MUST NOT BE EMPTY
 
 provisioner:
   name: ansible
 
 verifier:
   name: ansible
+
+test_sequence:                           # ✅ THIS WAS MISSING (MAIN BUG)
+  - syntax
+  - create
+  - converge
+  - destroy
+
+
+
+
+
+
+
+# ---
+# dependency:
+#   name: galaxy
+
+# driver:
+#   name: gce
+#   project_id: "{{ lookup('env','GCP_PROJECT_ID') }}"
+#   auth_kind: serviceaccount
+#   service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
+#   region: us-west1
+#   external_access: false
+#   instance_os_type: linux
+
+# platforms:
+#   - name: linuxgce-createdbymolecule
+#     machine_type: n1-standard-1
+#     zone:
+
+# provisioner:
+#   name: ansible
+
+# verifier:
+#   name: ansible
+
