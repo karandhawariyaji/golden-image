@@ -26,10 +26,11 @@
           source_image: "projects/debian-cloud/global/images/family/debian-11"   # ✅ HARD CODED
 
     network_interfaces:
-      - network: "default"        # ✅ DEFAULT NETWORK
-        access_configs:
-          - name: External NAT
-            type: ONE_TO_NAT
+      - network:         # ✅ DEFAULT NETWORK
+          selflink: "projects/546769007943/global/networks/default"
+        access_configs: []
+          # - name: External NAT
+          #   type: ONE_TO_NAT
 
   register: server
 
@@ -39,6 +40,7 @@
     host: "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}"
     search_regex: SSH
     delay: 10
+
 
 
 
