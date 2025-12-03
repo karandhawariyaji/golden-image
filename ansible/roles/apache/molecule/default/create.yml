@@ -56,9 +56,92 @@
       when:
         - instance_os_type | lower == "windows"
 
+    - name: Write instance IP to Molecule inventory
+      ansible.builtin.copy:
+        dest: "{{ molecule_instance_config }}"
+        content: |
+          {
+            "instance": [
+              {
+                "name": "linuxgce-createdbymolecule",
+                "address": "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}"
+              }
+            ]
+          }
+
   handlers:
     - name: Import main handler tasks
       ansible.builtin.import_tasks: handlers/main.yml
+
+
+
+
+
+
+
+
+
+# ---
+# - name: Create
+#   hosts: localhost
+#   connection: local
+#   gather_facts: false
+#   no_log: false
+
+#   vars:
+#     ssh_identity_file: "{{ lookup('env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/ssh_key"
+#     gcp_project_id: "robust-arcadia-475009-p4"
+#     gcp_region: "us-central1"
+#     gcp_network_name: "default"
+#     gcp_subnetwork_name: "default"
+#     instance_os_type: "linux"   # HARD CODED
+
+#   tasks:
+#     - name: Make sure if linux or windows either specified
+#       ansible.builtin.assert:
+#         that:
+#           - instance_os_type | lower == "linux" or instance_os_type | lower == "windows"
+#         fail_msg: "instance_os_type is possible only to specify linux or windows either"
+
+#     - name: Get network info
+#       google.cloud.gcp_compute_network_info:
+#         filters:
+#           - name = "{{ gcp_network_name }}"
+#         project: "{{ gcp_project_id }}"
+#         auth_kind: serviceaccount
+#         service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
+#       register: my_network
+
+#     - name: Get subnetwork info
+#       google.cloud.gcp_compute_subnetwork_info:
+#         filters:
+#           - name = "{{ gcp_subnetwork_name }}"
+#         project: "{{ gcp_project_id }}"
+#         region: "{{ gcp_region }}"
+#         auth_kind: serviceaccount
+#         service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
+#       register: my_subnetwork
+
+#     - name: Set external access config
+#       ansible.builtin.set_fact:
+#         external_access_config:
+#           - access_configs:
+#               - name: External NAT
+#                 type: ONE_TO_NAT
+
+#     - name: Include create_linux_instance tasks
+#       ansible.builtin.include_tasks: create_linux_instance.yml
+#       when:
+#         - instance_os_type | lower == "linux"
+
+#     - name: Include create_windows_instance tasks
+#       ansible.builtin.include_tasks: tasks/create_windows_instance.yml
+#       when:
+#         - instance_os_type | lower == "windows"
+
+#   handlers:
+#     - name: Import main handler tasks
+#       ansible.builtin.import_tasks: handlers/main.yml
 
 
 
@@ -123,6 +206,7 @@
 #   handlers:
 #     - name: Import main handler tasks
 #       ansible.builtin.import_tasks: handlers/main.yml
+
 
 
 
