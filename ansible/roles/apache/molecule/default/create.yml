@@ -47,7 +47,7 @@
                 type: ONE_TO_NAT
 
     - name: Include create_linux_instance tasks
-      ansible.builtin.include_tasks: tasks/create_linux_instance.yml
+      ansible.builtin.include_tasks: create_linux_instance.yml
       when:
         - instance_os_type | lower == "linux"
 
@@ -123,4 +123,5 @@
 #   handlers:
 #     - name: Import main handler tasks
 #       ansible.builtin.import_tasks: handlers/main.yml
+
 
