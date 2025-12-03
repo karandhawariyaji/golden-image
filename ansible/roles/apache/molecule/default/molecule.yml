@@ -44,7 +44,7 @@ driver:
   auth_kind: serviceaccount
   service_account_file: "{{ lookup('env','GCP_SERVICE_ACCOUNT_FILE') }}"
   region: us-central1
-  external_access: false
+  external_access: true
   instance_os_type: linux
 
 platforms:
@@ -57,5 +57,6 @@ provisioner:
 
 verifier:
   name: ansible
+
 
 
