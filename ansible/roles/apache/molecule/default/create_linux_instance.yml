@@ -28,7 +28,7 @@
     network_interfaces:
       - network:         # ✅ DEFAULT NETWORK
           selflink: "projects/546769007943/global/networks/default"
-        access_configs: []
+        access_configs: 
           - name: External NAT
             type: ONE_TO_NAT
 
@@ -40,6 +40,7 @@
     host: "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}"
     search_regex: SSH
     delay: 10
+
 
 
 
