@@ -8,7 +8,7 @@
 - name: Create hardcoded Linux VM
   google.cloud.gcp_compute_instance:
     state: present
-    name: "molecule-linux-vm"                     # ✅ HARD CODED
+    name: "linuxgce-createdbymolecule"                     # ✅ HARD CODED
     machine_type: "n1-standard-1"                 # ✅ HARD CODED
     zone: "us-central1-a"                         # ✅ HARD CODED
     project: "robust-arcadia-475009-p4"               # ✅ HARD CODED
@@ -40,6 +40,7 @@
     host: "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}"
     search_regex: SSH
     delay: 10
+
 
 
 
