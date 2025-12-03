@@ -11,7 +11,7 @@
     name: "molecule-linux-vm"                     # ✅ HARD CODED
     machine_type: "n1-standard-1"                 # ✅ HARD CODED
     zone: "us-central1-b"                         # ✅ HARD CODED
-    project: "YOUR_PROJECT_ID_HERE"               # ✅ HARD CODED
+    project: "robust-arcadia-475009-p4"               # ✅ HARD CODED
     auth_kind: serviceaccount
     service_account_file: "{{ lookup('env', 'GCP_SERVICE_ACCOUNT_FILE') }}"
 
@@ -39,3 +39,4 @@
     host: "{{ server.networkInterfaces[0].accessConfigs[0].natIP }}"
     search_regex: SSH
     delay: 10
+
