@@ -2,14 +2,18 @@ package integration
 
 import (
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
 )
 
-func TestApacheGoldenImage(t *testing.T) {
+func TestGoldenImageInfraWithOPA(t *testing.T) {
 	t.Parallel()
 
+	// -----------------------------
+	// ✅ 1. READ ENV VARS
+	// -----------------------------
 	imageName := os.Getenv("IMAGE_NAME")
 	if imageName == "" {
 		t.Fatal("IMAGE_NAME is not set")
@@ -28,12 +32,111 @@ func TestApacheGoldenImage(t *testing.T) {
 		},
 	}
 
-	// ✅ Only infra validation
-	terraform.InitAndApply(t, terraformOptions)
+	// -----------------------------
+	// ✅ 2. TERRAFORM INIT
+	// -----------------------------
+	terraform.Init(t, terraformOptions)
 
-	// ✅ Always cleanup
+	// -----------------------------
+	// ✅ 3. TERRAFORM PLAN
+	// -----------------------------
+	terraform.RunTerraformCommand(
+		t,
+		terraformOptions,
+		terraform.FormatArgs(terraformOptions, "plan", "-out=tfplan")...,
+	)
+
+	// Convert plan to JSON
+	terraform.RunTerraformCommand(
+		t,
+		terraformOptions,
+		"show", "-json", "tfplan", "tfplan.json",
+	)
+
+	// -----------------------------
+	// ✅ 4. OPA POLICY TEST
+	// -----------------------------
+	t.Log("Running OPA policy test on Terraform plan...")
+
+	opaCmd := exec.Command(
+		"conftest",
+		"test",
+		"tfplan.json",
+		"--policy",
+		"../../opa-policies",
+	)
+
+	opaCmd.Dir = terraformOptions.TerraformDir
+	opaOutput, err := opaCmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("❌ OPA policy violation:\n%s", string(opaOutput))
+	}
+
+	t.Log("✅ OPA policy validation passed")
+
+	// -----------------------------
+	// ✅ 5. TERRAFORM APPLY
+	// -----------------------------
+	terraform.Apply(t, terraformOptions)
+
+	// -----------------------------
+	// ✅ 6. TERRAFORM DESTROY
+	// -----------------------------
 	defer terraform.Destroy(t, terraformOptions)
+
+	t.Log("✅ Infra created, validated, and will be destroyed")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// package integration
+
+// import (
+// 	"os"
+// 	"testing"
+
+// 	"github.com/gruntwork-io/terratest/modules/terraform"
+// )
+
+// func TestApacheGoldenImage(t *testing.T) {
+// 	t.Parallel()
+
+// 	imageName := os.Getenv("IMAGE_NAME")
+// 	if imageName == "" {
+// 		t.Fatal("IMAGE_NAME is not set")
+// 	}
+
+// 	projectID := os.Getenv("GCP_PROJECT")
+// 	if projectID == "" {
+// 		t.Fatal("GCP_PROJECT is not set")
+// 	}
+
+// 	terraformOptions := &terraform.Options{
+// 		TerraformDir: "../fixtures/vm",
+// 		Vars: map[string]interface{}{
+// 			"image_name": imageName,
+// 			"project_id": projectID,
+// 		},
+// 	}
+
+// 	// ✅ Only infra validation
+// 	terraform.InitAndApply(t, terraformOptions)
+
+// 	// ✅ Always cleanup
+// 	defer terraform.Destroy(t, terraformOptions)
+// }
 
 
 
@@ -274,6 +377,7 @@ func TestApacheGoldenImage(t *testing.T) {
 // 		10*time.Second,
 // 	)
 // }
+
 
 
 
