@@ -2,7 +2,7 @@ name: Apache Golden Image - GCP
 
 on:
   push:
-    branches: ["main"]
+    branches: ["sushma"]
   workflow_dispatch:
 
 jobs:
