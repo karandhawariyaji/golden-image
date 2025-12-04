@@ -110,9 +110,10 @@ build {
   }
 
   provisioner "ansible" {
-    playbook_file = "../ansible/apache.yaml"
+    playbook_file = "../ansible/apache.yml"
   }
 }
+
 
 
 
