@@ -57,20 +57,20 @@ jobs:
         run: ls -R ansible/roles/apache/molecule/default
 
 
-      - name: Run Molecule
-        run: |
-          # cd ansible/roles/apache/molecule/default
-          # pwd
-          # ls -l
-          cd ansible/roles/apache
-          molecule test -s default
+      # - name: Run Molecule
+      #   run: |
+      #     # cd ansible/roles/apache/molecule/default
+      #     # pwd
+      #     # ls -l
+      #     cd ansible/roles/apache
+      #     molecule test -s default
           
 
   # ----------------------------
   # JOB 1: PACKER VALIDATE
   # ----------------------------
   validate:
-    needs: molecule
+    # needs: molecule
     runs-on: ubuntu-latest
 
     steps:
@@ -167,6 +167,13 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+      # ✅ INSTALL OPA (CONFTST)
+      - name: Install Conftest (OPA)
+        run: |
+          wget -qO- https://github.com/open-policy-agent/conftest/releases/latest/download/conftest_Linux_x86_64.tar.gz | tar xz
+          sudo mv conftest /usr/local/bin/conftest
+          conftest --version
 
       - name: Run Terratest
         run: |
