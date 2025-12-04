@@ -171,9 +171,12 @@ jobs:
       # ✅ INSTALL OPA (CONFTST)
       - name: Install Conftest (OPA)
         run: |
-          wget -qO- https://github.com/open-policy-agent/conftest/releases/latest/download/conftest_Linux_x86_64.tar.gz | tar xz
-          sudo mv conftest /usr/local/bin/conftest
+          curl -L https://github.com/open-policy-agent/conftest/releases/latest/download/conftest_0.47.4_Linux_x86_64.tar.gz \
+            -o conftest.tar.gz
+          tar -xzf conftest.tar.gz
+          sudo mv conftest /usr/local/bin/
           conftest --version
+
 
       - name: Run Terratest
         run: |
