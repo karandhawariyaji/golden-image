@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gruntwork-io/terratest/modules/gcp"
+	"github.com/gruntwork-io/terratest/modules/shell"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,28 +29,24 @@ func TestGoldenImageWithOPA(t *testing.T) {
 		name          string
 		region        string
 		machineType   string
-		hasPublicIP   bool
 		shouldPassOPA bool
 	}{
 		{
 			name:          "ValidConfig",
 			region:        "us-central1",
 			machineType:   "n1-standard-2",
-			hasPublicIP:   false,
 			shouldPassOPA: true,
 		},
 		{
 			name:          "InvalidRegion",
 			region:        "asia-south1",
 			machineType:   "n1-standard-2",
-			hasPublicIP:   false,
 			shouldPassOPA: false,
 		},
 		{
 			name:          "InvalidMachineType",
 			region:        "us-central1",
 			machineType:   "n1-highmem-8",
-			hasPublicIP:   false,
 			shouldPassOPA: false,
 		},
 	}
@@ -81,17 +79,12 @@ func TestGoldenImageWithOPA(t *testing.T) {
 			// Step 1: Initialize Terraform
 			terraform.Init(t, terraformOptions)
 
-			// Step 2: Create plan
-			planFile := filepath.Join(testDir, "tfplan")
-			terraform.PlanWithOptions(t, terraformOptions, &terraform.PlanOptions{
-				Out: planFile,
-			})
+			// Step 2: Create plan using simple Plan (not PlanWithOptions)
+			terraform.Plan(t, terraformOptions)
 
-			// Step 3: Convert plan to JSON for OPA
-			planJSON := terraform.ShowWithOptions(t, terraformOptions, &terraform.ShowOptions{
-				Json:         true,
-				PlanFilePath: planFile,
-			})
+			// Step 3: Get plan as JSON
+			planJSON, err := terraform.ShowE(t, terraformOptions)
+			require.NoError(t, err)
 
 			// Step 4: Run OPA validation
 			passed := validateWithOPA(t, planJSON)
@@ -127,10 +120,13 @@ func validateWithOPA(t *testing.T, planJSON string) bool {
 	// Policy file path
 	policyFile, _ := filepath.Abs("../opa-policies/vm_policy.rego")
 
-	// Run OPA command
-	cmd := fmt.Sprintf("opa eval -i %s -d %s 'data.vm.policies.deny' --format json", planFile, policyFile)
+	// Run OPA command using shell package
+	cmd := shell.Command{
+		Command: "opa",
+		Args:    []string{"eval", "-i", planFile, "-d", policyFile, "data.vm.policies.deny", "--format", "json"},
+	}
 	
-	output, err := terraform.RunShellCommandWithOutputE(t, &terraform.Options{}, "bash", "-c", cmd)
+	output, err := shell.RunCommandAndGetOutputE(t, cmd)
 	
 	if err != nil {
 		t.Logf("OPA command failed: %v", err)
@@ -181,13 +177,21 @@ func TestGoldenImageExists(t *testing.T) {
 	// Just init to validate
 	terraform.Init(t, terraformOptions)
 	t.Log("✅ Image reference is valid")
+	
+	// Quick test: fetch image via GCP API
+	ctx := t.Context()
+	imagesClient, err := gcp.NewImagesClientE(t, projectID)
+	if err == nil {
+		defer imagesClient.Close()
+		image, err := imagesClient.Get(ctx, &gcp.GetImageRequest{
+			Project: projectID,
+			Image:   imageName,
+		})
+		if err == nil {
+			t.Logf("✅ Image details: %s (status: %s)", image.GetName(), image.GetStatus())
+		}
+	}
 }
-
-
-
-
-
-
 
 
 // package integration
@@ -667,6 +671,7 @@ func TestGoldenImageExists(t *testing.T) {
 // 		10*time.Second,
 // 	)
 // }
+
 
 
 
