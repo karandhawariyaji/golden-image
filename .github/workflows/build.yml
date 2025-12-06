@@ -168,34 +168,55 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # ✅ INSTALL OPA (CONFTST)
-      - name: Install Conftest (OPA)
+      
+      - name: Install OPA
         run: |
-          set -e
-      
-          echo "Downloading latest Conftest..."
-          curl -sL https://github.com/open-policy-agent/conftest/releases/latest/download/conftest_Linux_x86_64.tar.gz \
-            -o conftest.tar.gz
-      
-          echo "Validating archive..."
-          file conftest.tar.gz | grep gzip
-      
-          tar -xzf conftest.tar.gz
-          sudo mv conftest /usr/local/bin/conftest
-          sudo chmod +x /usr/local/bin/conftest
-      
-          conftest --version
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          chmod +x opa
+          sudo mv opa /usr/local/bin/
+          echo "OPA version:"
+          opa version
 
-
-
-
-      - name: Run Terratest
+      - name: Verify OPA Policy
         run: |
-          cd test
-          go mod tidy
-          GCP_PROJECT=${{ secrets.GCP_PROJECT_ID }} \
+          echo "Checking OPA policy syntax..."
+          opa check test/opa-policies/
+
+      - name: Run Terratest with OPA
+        run: |
+          cd test/integration
+          GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} \
           IMAGE_NAME=$IMAGE_NAME \
-          go test -v -timeout 30m ./integration
+          go test -v -timeout 20m ./...
+
+      # # ✅ INSTALL OPA (CONFTST)
+      # - name: Install Conftest (OPA)
+      #   run: |
+      #     set -e
+      
+      #     echo "Downloading latest Conftest..."
+      #     curl -sL https://github.com/open-policy-agent/conftest/releases/latest/download/conftest_Linux_x86_64.tar.gz \
+      #       -o conftest.tar.gz
+      
+      #     echo "Validating archive..."
+      #     file conftest.tar.gz | grep gzip
+      
+      #     tar -xzf conftest.tar.gz
+      #     sudo mv conftest /usr/local/bin/conftest
+      #     sudo chmod +x /usr/local/bin/conftest
+      
+      #     conftest --version
+
+
+
+
+      # - name: Run Terratest
+      #   run: |
+      #     cd test
+      #     go mod tidy
+      #     GCP_PROJECT=${{ secrets.GCP_PROJECT_ID }} \
+      #     IMAGE_NAME=$IMAGE_NAME \
+      #     go test -v -timeout 30m ./integration
 
   # ----------------------------
   # JOB 4: DELETE IMAGE (ONLY IF TERRATEST FAILS)
