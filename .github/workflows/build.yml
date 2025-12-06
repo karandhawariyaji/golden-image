@@ -185,6 +185,11 @@ jobs:
       - name: Run Terratest with OPA
         run: |
           cd test/integration
+          
+          go mod init image-testing && \
+          go get github.com/gruntwork-io/terratest && \
+          go mod tidy
+          
           GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }} \
           IMAGE_NAME=$IMAGE_NAME \
           go test -v -timeout 20m ./...
