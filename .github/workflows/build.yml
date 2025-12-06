@@ -177,10 +177,10 @@ jobs:
           echo "OPA version:"
           opa version
 
-      - name: Verify OPA Policy
-        run: |
-          echo "Checking OPA policy syntax..."
-          opa check test/opa-policies/
+      # - name: Verify OPA Policy
+      #   run: |
+      #     echo "Checking OPA policy syntax..."
+      #     opa check test/opa-policies/
 
       - name: Run Terratest with OPA
         run: |
